@@ -37,7 +37,7 @@ class PathParser {
                 v.group(2),
                 v.group(3),
                 v.group(4),
-                Metadata.Nature.RELEASE_OR_SNAPSHOT
+                v.group(3).endsWith("-SNAPSHOT") ? Metadata.Nature.SNAPSHOT : Metadata.Nature.RELEASE
             );
         }
 

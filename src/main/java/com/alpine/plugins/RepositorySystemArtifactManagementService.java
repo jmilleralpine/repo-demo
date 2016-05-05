@@ -18,6 +18,7 @@ import org.eclipse.aether.installation.InstallResult;
 import org.eclipse.aether.installation.InstallationException;
 import org.eclipse.aether.metadata.Metadata;
 import org.eclipse.aether.repository.*;
+import org.eclipse.aether.resolution.ArtifactResult;
 import org.eclipse.aether.resolution.DependencyRequest;
 import org.eclipse.aether.resolution.DependencyResolutionException;
 import org.eclipse.aether.resolution.DependencyResult;
@@ -32,12 +33,13 @@ import org.eclipse.aether.util.graph.transformer.JavaScopeSelector;
 import org.eclipse.aether.util.graph.transformer.NearestVersionSelector;
 import org.eclipse.aether.util.graph.transformer.SimpleOptionalitySelector;
 
+import javax.inject.Inject;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Manages artifacts using the maven repository system
@@ -45,12 +47,6 @@ import java.util.concurrent.TimeUnit;
  * @author jasonmiller
  */
 class RepositorySystemArtifactManagementService implements ArtifactManagementService {
-
-    @SuppressWarnings("unused")
-    enum AllowSnapshotsOption {
-        NO_SNAPSHOTS,
-        ALLOW_SNAPSHOTS
-    }
 
     private final Path localRepo;
     private final List<RemoteRepository> repos;
@@ -64,16 +60,12 @@ class RepositorySystemArtifactManagementService implements ArtifactManagementSer
     private static final RepositoryPolicy RELEASE_POLICY =
         new RepositoryPolicy(true, RepositoryPolicy.UPDATE_POLICY_NEVER, RepositoryPolicy.CHECKSUM_POLICY_FAIL);
 
-    RepositorySystemArtifactManagementService(
-        Path localRepo,
-        List<Repo> repos,
-        AllowSnapshotsOption allowSnapshots,
-        long connectTimeout, TimeUnit connectTimeoutUnit,
-        long requestTimeout, TimeUnit requestTimeoutUnit
-    ) {
-        this.localRepo = localRepo;
-        this.connectTimeoutMillis = TimeUnit.MILLISECONDS.convert(connectTimeout, connectTimeoutUnit);
-        this.requestTimeoutMillis = TimeUnit.MILLISECONDS.convert(requestTimeout, requestTimeoutUnit);
+    @Inject
+    RepositorySystemArtifactManagementService(RepositorySystemConfiguration configuration) {
+
+        this.localRepo = configuration.localRepo();
+        this.connectTimeoutMillis = configuration.connectTimeout().toMillis();
+        this.requestTimeoutMillis = configuration.requestTimeout().toMillis();
 
         assert localRepo != null : "local repo must not be null";
         assert connectTimeoutMillis > 0 : "connect timeout must be > 0ms";
@@ -81,13 +73,13 @@ class RepositorySystemArtifactManagementService implements ArtifactManagementSer
 
         snapshotPolicy =
             new RepositoryPolicy(
-                allowSnapshots == AllowSnapshotsOption.ALLOW_SNAPSHOTS,
+                configuration.allowSnapshots(),
                 RepositoryPolicy.UPDATE_POLICY_ALWAYS,
                 RepositoryPolicy.CHECKSUM_POLICY_WARN
             );
 
-        ArrayList<RemoteRepository> repoMaker = new ArrayList<>(repos.size());
-        for (Repo repo : repos) {
+        ArrayList<RemoteRepository> repoMaker = new ArrayList<>(configuration.remoteRepos().size());
+        for (Repo repo : configuration.remoteRepos()) {
             repoMaker.add(newRepo(repo.id, repo.uri));
         }
         this.repos = Collections.unmodifiableList(repoMaker);
@@ -174,26 +166,48 @@ class RepositorySystemArtifactManagementService implements ArtifactManagementSer
     }
 
     @Override
-    public LocalArtifactResult find(Artifact artifact) {
-        return session.getLocalRepositoryManager().find(session, new LocalArtifactRequest(artifact, null, null));
+    public Artifact find(Artifact artifact) {
+        assert artifact != null && artifact.getFile() == null : "can only find a non-null, unresolved artifact";
+
+        LocalArtifactResult result =
+            session.getLocalRepositoryManager().find(session, new LocalArtifactRequest(artifact, null, null));
+        return artifact.setFile(result.getFile());
     }
 
     @Override
-    public LocalMetadataResult find(Metadata metadata) {
-        return session.getLocalRepositoryManager().find(session, new LocalMetadataRequest(metadata, null, null));
+    public Metadata find(Metadata metadata) {
+        assert metadata != null && metadata.getFile() == null : "can only find a non-null, unresolved metadata";
+
+        LocalMetadataResult result =
+            session.getLocalRepositoryManager().find(session, new LocalMetadataRequest(metadata, null, null));
+        return metadata.setFile(result.getFile());
     }
 
     @Override
-    public DependencyResult resolve(Artifact artifact) throws DependencyResolutionException {
-        return system.resolveDependencies(
-                session,
-                // yay java, objects in objects in objects!
-                new DependencyRequest(new CollectRequest(new Dependency(artifact, "runtime"), repos), null)
+    public Collection<Artifact> resolve(Artifact artifact) throws DependencyResolutionException {
+        assert artifact != null && artifact.getFile() == null : "can only resolve a non-null, unresolved artifact";
+
+        DependencyResult result = system.resolveDependencies(
+            session,
+            // yay java, objects in objects in objects!
+            new DependencyRequest(new CollectRequest(new Dependency(artifact, "runtime"), repos), null)
         );
+
+        ArrayList<Artifact> response = new ArrayList<>(result.getArtifactResults().size());
+
+        for (ArtifactResult artifactResult : result.getArtifactResults()) {
+            response.add(artifactResult.getArtifact());
+        }
+
+        return Collections.unmodifiableList(response);
     }
 
     @Override
-    public InstallResult install(Artifact artifact) throws InstallationException {
-        return system.install(session, new InstallRequest().addArtifact(artifact));
+    public boolean install(Artifact artifact) throws InstallationException {
+        assert artifact != null && artifact.getFile() != null : "can only install a non-null, resolved artifact";
+
+        InstallResult result = system.install(session, new InstallRequest().addArtifact(artifact));
+        return result.getArtifacts().size() == 1 &&
+                result.getArtifacts().iterator().next().toString().equals(artifact.toString());
     }
 }

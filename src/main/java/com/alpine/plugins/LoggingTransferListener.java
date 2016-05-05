@@ -5,7 +5,7 @@ import org.eclipse.aether.transfer.TransferEvent;
 import org.eclipse.aether.transfer.TransferListener;
 
 /**
- * ehhhhhh
+ *
  */
 class LoggingTransferListener implements TransferListener {
     @Override

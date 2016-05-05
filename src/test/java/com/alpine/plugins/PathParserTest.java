@@ -1,6 +1,7 @@
 package com.alpine.plugins;
 
 import org.eclipse.aether.artifact.Artifact;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -8,14 +9,19 @@ import static org.junit.Assert.*;
 
 public class PathParserTest {
 
+    // stateless so one instance will do
+    private PathParser pta = new PathParser();
 
-    PathParser pta = new PathParser();
+    private Artifact a;
+
+    @Before
+    public void before() {
+        a = null;
+    }
 
 
     @Test
-    public void test() {
-
-        Artifact a;
+    public void testParseArtifact() {
 
         a = pta.parseArtifact("junit/junit/4.12/junit-4.12.jar");
         assertThat(a.toString(), is("junit:junit:jar:4.12"));

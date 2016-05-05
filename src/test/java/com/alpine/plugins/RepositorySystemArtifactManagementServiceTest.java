@@ -2,120 +2,94 @@ package com.alpine.plugins;
 
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
-import org.eclipse.aether.installation.InstallResult;
-import org.eclipse.aether.repository.LocalArtifactResult;
-import org.eclipse.aether.resolution.ArtifactResult;
-import org.eclipse.aether.resolution.DependencyResult;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.net.URI;
-import java.nio.file.*;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
+import java.util.*;
+
+import static com.alpine.plugins.TestHelpers.*;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 public class RepositorySystemArtifactManagementServiceTest {
 
-    static class DirectoryKiller extends SimpleFileVisitor<Path> {
-
-        void kill(Path path) throws IOException {
-            Files.walkFileTree(path, this);
-        }
-
-        @Override
-        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-            Files.delete(file);
-            return FileVisitResult.CONTINUE;
-        }
-
-        @Override
-        public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-            Files.delete(dir);
-            return FileVisitResult.CONTINUE;
-        }
-    }
-
-    DirectoryKiller directoryKiller = new DirectoryKiller();
-
-    // local repo location [$HOME/ALPINE_DATA_REPOSITORY/m2]
-    // remote repos [none]
-    // allow snapshots? [false]
-    // connect timeout ms [5000]
-    // request timeout ms [10000]
-
-    private static final Path LOCAL_REPO = Paths.get(System.getProperty("user.home")).resolve("ALPINE_TEST_REPO").toAbsolutePath();
-    private static final Path M2_REPO = Paths.get(System.getProperty("user.home")).resolve(".m2").resolve("repository").toAbsolutePath();
+    private final DirectoryKiller dk = new DirectoryKiller();
 
     @After
-    public void after() throws IOException {
-        //directoryKiller.kill(LOCAL_REPO);
+    public void after() {
+        // if there were failures this will clean up after them, but we ignore issues
+        try { dk.kill(LOCAL_REPO); } catch (IOException ignored) { /* ignored! */ }
+        try { dk.kill(LOCAL_REPO_2); } catch (IOException ignored) { /* ignored! */ }
     }
 
-    //@Ignore
-    @Test
-    public void basicSillyTest() throws Exception {
+    private void testResolution(RepositorySystemArtifactManagementService service) throws Exception {
 
-        List<Repo> repos = new ArrayList<>();
-        // repos.add(new Repo("central")); // maven central via HTTPS is well-known
-        // repos.add(new Repo("jcenter")); // bintray via HTTPS is well-known
-        repos.add(new Repo("alpine-artifactory")); // our artifactory! only works on the network
-        //repos.add(new Repo("local-m2", M2_REPO.toUri()));
-        RepositorySystemArtifactManagementService r = new RepositorySystemArtifactManagementService(
-            LOCAL_REPO, repos,
-            RepositorySystemArtifactManagementService.AllowSnapshotsOption.NO_SNAPSHOTS,
-            5, TimeUnit.SECONDS,
-            10, TimeUnit.SECONDS
-        );
-        //r.resolve("com.alpinenow:plugin-core:1.5.1");
-        //r.resolve("junit:junit:4.11");
-        final DependencyResult result =
-            r.resolve(new DefaultArtifact("maven.upload:test-test-test:1.0-SNAPSHOT"));
+        final Collection<Artifact> result =
+            service.resolve(new DefaultArtifact(JUNIT_JAR_COORDS));
 
-        System.out.println(result.getRequest().getCollectRequest().getTrace());
-        for (ArtifactResult artifactResult : result.getArtifactResults()) {
-            System.out.println(artifactResult.getArtifact());
-            System.out.println(artifactResult.getRepository());
-            System.out.println(artifactResult.getArtifact().getFile().toURI().toURL());
-            System.out.println(artifactResult.getArtifact().getProperties());
-            System.out.println();
-        }
+        assertThat(result.size(), is(2));
+        Iterator<Artifact> i = result.iterator();
+        Artifact junit = i.next();
+        Artifact hamcrest = i.next();
 
-        // each artifact result holds a file pointing to a jar suitable to
-        // be stuffed into a URLClassLoader
+        assertThat(junit.toString(), is(JUNIT_JAR_COORDS));
+        assertThat(junit.getFile().getName(), is("junit-4.11.jar"));
+
+        assertThat(hamcrest.toString(), is(HAMCREST_JAR_COORDS));
+        assertThat(hamcrest.getFile().getName(), is("hamcrest-core-1.3.jar"));
+
+        // and we should also have the poms available now
+        Artifact junitPom = service.find(new DefaultArtifact(JUNIT_POM_COORDS));
+        assertThat(junitPom.getFile(), is(notNullValue()));
+        assertThat(junitPom.getFile().getName(), is("junit-4.11.pom"));
+
+        Artifact hamcrestPom = service.find(new DefaultArtifact(HAMCREST_POM_COORDS));
+        assertThat(hamcrestPom.getFile(), is(notNullValue()));
+        assertThat(hamcrestPom.getFile().getName(), is("hamcrest-core-1.3.pom"));
     }
 
-    @Ignore
     @Test
-    public void testInstall() throws Exception {
+    public void testResolution() throws Exception {
+        // load from alpine and from maven, to prove that we can, that the basics work
 
-        RepositorySystemArtifactManagementService r = new RepositorySystemArtifactManagementService(
-                LOCAL_REPO, Collections.<Repo>emptyList(),
-                RepositorySystemArtifactManagementService.AllowSnapshotsOption.NO_SNAPSHOTS,
-                5, TimeUnit.SECONDS,
-                10, TimeUnit.SECONDS
-        );
+        testResolution(service(ALPINE_ARTIFACTORY));
+        dk.kill(LOCAL_REPO);
 
+        testResolution(service(TestHelpers.MAVEN_CENTRAL));
+        dk.kill(LOCAL_REPO);
+    }
 
+    @Test
+    public void testInstallation() throws Exception {
 
+        // one for grabbing the jars we're going to install, connected to our lovely artifactory
+        RepositorySystemArtifactManagementService grabber = service(LOCAL_REPO_2, ALPINE_ARTIFACTORY);
+        Collection<Artifact> result = grabber.resolve(new DefaultArtifact(JUNIT_JAR_COORDS));
 
-        //  String groupId, String artifactId, String classifier, String extension, String version
+        assertThat(result.size(), is(2));
 
+        // one for installing, connected to nothing
+        RepositorySystemArtifactManagementService installer = service();
 
-        InstallResult installResult =
-            r.install(
-                new DefaultArtifact("jballs:jballs:4.12")
-                    .setFile(M2_REPO.resolve("junit/junit/4.12/junit-4.12.pom").toFile()));
+        // copy the interesting artifacts over
+        assertTrue(installer.install(grabber.find(new DefaultArtifact(JUNIT_JAR_COORDS))));
+        assertTrue(installer.install(grabber.find(new DefaultArtifact(JUNIT_POM_COORDS))));
+        assertTrue(installer.install(grabber.find(new DefaultArtifact(HAMCREST_JAR_COORDS))));
+        assertTrue(installer.install(grabber.find(new DefaultArtifact(HAMCREST_POM_COORDS))));
+        assertTrue(installer.install(grabber.find(new DefaultArtifact(HAMCREST_PARENT_POM_COORDS))));
 
-        for (Artifact artifact : installResult.getArtifacts()) {
-            System.out.println(artifact);
-        }
+        // now we should be able to kill the grabber and resolve Junit successfully from the installer
+        dk.kill(LOCAL_REPO_2);
+        // verify it is not involved anymore
+        assertThat(grabber.find(new DefaultArtifact(JUNIT_JAR_COORDS)).getFile(), is(nullValue()));
 
+        // and now we should be able to resolve junit in our offline repo
+        testResolution(installer);
+        dk.kill(LOCAL_REPO);
     }
 
 }

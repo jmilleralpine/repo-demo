@@ -4,5 +4,5 @@ clone the repo, then run
 
 how exciting!
 
-check in com.alpine.plugins.RepositorySystemArtifactManagementServiceTest to play with it
+check in RepositorySystemArtifactManagementServiceTest to play with it
 

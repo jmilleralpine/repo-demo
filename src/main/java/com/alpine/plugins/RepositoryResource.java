@@ -9,7 +9,6 @@ import javax.ws.rs.GET;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.File;
 
@@ -49,7 +48,6 @@ public class RepositoryResource {
     @GET
     @Path("/{path:.*}")
     public Response get(@PathParam("path") String path) throws Exception {
-        System.out.println("GET:" + path);
         Artifact artifact = pathParser.parseArtifact(path);
         Metadata metadata = pathParser.parseMetadata(path);
         if (artifact != null) {
@@ -64,13 +62,13 @@ public class RepositoryResource {
     @PUT
     @Path("/{path:.*}")
     public Response put(@PathParam("path") String path, File input) throws Exception {
-        System.out.println("PUT:" + path);
         try {
             Artifact artifact = pathParser.parseArtifact(path);
 
             if (artifact != null) {
 
-                if (artifactManagementService.find(artifact).isAvailable() && !artifact.isSnapshot()) {
+                if (artifactManagementService.find(artifact).getFile() != null && !artifact.isSnapshot()) {
+                    // do not allow overwriting releases
                     return CONFLICT;
                 }
 
@@ -79,12 +77,15 @@ public class RepositoryResource {
             }
 
             if (pathParser.parseMetadata(path) != null) {
-                // we indicate we're cool with whatever metadata but we maintain our own, thanks
+                // we indicate we're cool with whatever metadata
+                // because it appears the clients expect that
+                // but we maintain our own, thanks
                 return ACCEPTED;
             }
 
             return NOT_FOUND;
         } finally {
+            //noinspection ResultOfMethodCallIgnored
             input.delete(); // quietly
         }
     }
