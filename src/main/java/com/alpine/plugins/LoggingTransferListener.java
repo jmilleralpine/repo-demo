@@ -20,8 +20,7 @@ class LoggingTransferListener implements TransferListener {
 
     @Override
     public void transferProgressed(TransferEvent event) throws TransferCancelledException {
-        System.out.println(event);
-        System.out.println(event.getTransferredBytes());
+        // what...ev...er
     }
 
     @Override

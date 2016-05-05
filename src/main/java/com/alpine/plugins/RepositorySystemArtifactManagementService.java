@@ -7,15 +7,17 @@ import org.eclipse.aether.ConfigurationProperties;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
-import org.eclipse.aether.artifact.DefaultArtifact;
+import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.collection.CollectRequest;
 import org.eclipse.aether.connector.basic.BasicRepositoryConnectorFactory;
 import org.eclipse.aether.graph.Dependency;
 import org.eclipse.aether.impl.DefaultServiceLocator;
 import org.eclipse.aether.impl.SyncContextFactory;
-import org.eclipse.aether.repository.LocalRepository;
-import org.eclipse.aether.repository.RemoteRepository;
-import org.eclipse.aether.repository.RepositoryPolicy;
+import org.eclipse.aether.installation.InstallRequest;
+import org.eclipse.aether.installation.InstallResult;
+import org.eclipse.aether.installation.InstallationException;
+import org.eclipse.aether.metadata.Metadata;
+import org.eclipse.aether.repository.*;
 import org.eclipse.aether.resolution.DependencyRequest;
 import org.eclipse.aether.resolution.DependencyResolutionException;
 import org.eclipse.aether.resolution.DependencyResult;
@@ -35,14 +37,16 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Resolves artifact coordinates in similar fashion to maven, leaving jar files
- * in a configured local repository, and producing a list of paths to the relevant
- * jars in the repository, suitable for making into a URLClassLoader, for instance
+ * Manages artifacts using the maven repository system
+ *
+ * @author jasonmiller
  */
-class PluginResolver {
+class RepositorySystemArtifactManagementService implements ArtifactManagementService {
 
+    @SuppressWarnings("unused")
     enum AllowSnapshotsOption {
         NO_SNAPSHOTS,
         ALLOW_SNAPSHOTS
@@ -60,22 +64,26 @@ class PluginResolver {
     private static final RepositoryPolicy RELEASE_POLICY =
         new RepositoryPolicy(true, RepositoryPolicy.UPDATE_POLICY_NEVER, RepositoryPolicy.CHECKSUM_POLICY_FAIL);
 
-    PluginResolver(
+    RepositorySystemArtifactManagementService(
         Path localRepo,
         List<Repo> repos,
-        AllowSnapshotsOption allowSnapshot,
-        long connectTimeoutMillis,
-        long requestTimeoutMillis
+        AllowSnapshotsOption allowSnapshots,
+        long connectTimeout, TimeUnit connectTimeoutUnit,
+        long requestTimeout, TimeUnit requestTimeoutUnit
     ) {
         this.localRepo = localRepo;
-        this.connectTimeoutMillis = connectTimeoutMillis;
-        this.requestTimeoutMillis = requestTimeoutMillis;
+        this.connectTimeoutMillis = TimeUnit.MILLISECONDS.convert(connectTimeout, connectTimeoutUnit);
+        this.requestTimeoutMillis = TimeUnit.MILLISECONDS.convert(requestTimeout, requestTimeoutUnit);
+
+        assert localRepo != null : "local repo must not be null";
+        assert connectTimeoutMillis > 0 : "connect timeout must be > 0ms";
+        assert requestTimeoutMillis > 0 : "request timeout must be > 0ms";
 
         snapshotPolicy =
             new RepositoryPolicy(
-                allowSnapshot == AllowSnapshotsOption.ALLOW_SNAPSHOTS,
+                allowSnapshots == AllowSnapshotsOption.ALLOW_SNAPSHOTS,
                 RepositoryPolicy.UPDATE_POLICY_ALWAYS,
-                RepositoryPolicy.CHECKSUM_POLICY_FAIL
+                RepositoryPolicy.CHECKSUM_POLICY_WARN
             );
 
         ArrayList<RemoteRepository> repoMaker = new ArrayList<>(repos.size());
@@ -116,12 +124,14 @@ class PluginResolver {
 
     private static final FileManager takariFileManager = new DefaultFileManager();
 
+    @SuppressWarnings("WeakerAccess") // needs to be public so the locator can see it
     public static class LockingFileProcessor extends io.takari.aether.concurrency.LockingFileProcessor {
         public LockingFileProcessor() {
             super(takariFileManager);
         }
     }
 
+    @SuppressWarnings("WeakerAccess") // needs to be public so the locator can see it
     public static class LockingSyncContextFactory extends io.takari.aether.concurrency.LockingSyncContextFactory {
         public LockingSyncContextFactory() {
             super(takariFileManager);
@@ -143,11 +153,12 @@ class PluginResolver {
 
         session.setConfigProperty(ConfigurationProperties.CONNECT_TIMEOUT, connectTimeoutMillis);
         session.setConfigProperty(ConfigurationProperties.REQUEST_TIMEOUT, requestTimeoutMillis);
+
         // this possibly has a weird conflict resolution impact and I'm not convinced it's
         // helpful anyway
         //session.setConfigProperty(ConflictResolver.CONFIG_PROP_VERBOSE, true);
 
-        session.setOffline(false);
+        session.setOffline(repos.isEmpty());
         session.setUpdatePolicy(RepositoryPolicy.UPDATE_POLICY_ALWAYS);
 
         session.setDependencyGraphTransformer(newConflictResolver());
@@ -162,13 +173,27 @@ class PluginResolver {
         return session;
     }
 
-    public DependencyResult resolve(String coordinates) throws DependencyResolutionException {
+    @Override
+    public LocalArtifactResult find(Artifact artifact) {
+        return session.getLocalRepositoryManager().find(session, new LocalArtifactRequest(artifact, null, null));
+    }
+
+    @Override
+    public LocalMetadataResult find(Metadata metadata) {
+        return session.getLocalRepositoryManager().find(session, new LocalMetadataRequest(metadata, null, null));
+    }
+
+    @Override
+    public DependencyResult resolve(Artifact artifact) throws DependencyResolutionException {
         return system.resolveDependencies(
-            session,
-            new DependencyRequest(new CollectRequest(
-                new Dependency(new DefaultArtifact(coordinates), "runtime"),
-                repos
-            ), null)
+                session,
+                // yay java, objects in objects in objects!
+                new DependencyRequest(new CollectRequest(new Dependency(artifact, "runtime"), repos), null)
         );
+    }
+
+    @Override
+    public InstallResult install(Artifact artifact) throws InstallationException {
+        return system.install(session, new InstallRequest().addArtifact(artifact));
     }
 }

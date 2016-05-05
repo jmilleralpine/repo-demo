@@ -15,9 +15,8 @@ class Repo {
     static {
         Map<String, String> map = new HashMap<>(7);
         map.put("central", "https://repo1.maven.org/maven2/");
-        map.put("central-http", "http://repo1.maven.org/maven2/");
         map.put("jcenter", "https://jcenter.bintray.com/");
-        map.put("jcenter-http", "http://jcenter.bintray.com/");
+        map.put("alpine-artifactory", "http://repo.alpinenow.local/artifactory/repo/");
         KNOWN_REPOS = Collections.unmodifiableMap(map);
     }
 
