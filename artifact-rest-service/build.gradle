@@ -1,0 +1,10 @@
+
+ext.jerseyVer = '2.22.2'
+
+dependencies {
+
+    compile project(':artifact-management-service')
+
+    compile "org.glassfish.jersey.core:jersey-server:$jerseyVer"
+    compile "org.glassfish.jersey.containers:jersey-container-grizzly2-http:$jerseyVer"
+}

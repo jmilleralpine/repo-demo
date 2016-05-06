@@ -1,0 +1,32 @@
+
+
+ext.aetherVer = '1.1.0'
+ext.mavenVer = '3.3.9'
+ext.takariLocalRepoVer = '0.11.2'
+ext.takariFilemanVer = '0.8.3'
+ext.plexusVer = '1.6'
+
+dependencies {
+
+    compile "org.eclipse.aether:aether-api:$aetherVer"
+    compile "org.eclipse.aether:aether-util:$aetherVer"
+    compile "org.eclipse.aether:aether-impl:$aetherVer"
+    compile "org.eclipse.aether:aether-connector-basic:$aetherVer"
+    compile "org.eclipse.aether:aether-transport-file:$aetherVer"
+    compile("org.eclipse.aether:aether-transport-http:$aetherVer") {
+        exclude group: 'org.slf4j', module: 'slf4j-api'
+    }
+    compile("org.apache.maven:maven-aether-provider:$mavenVer") {
+        exclude group: 'org.eclipse.aether', module: '*'
+    }
+    compile "io.takari.aether:takari-local-repository:$takariLocalRepoVer"
+    compile("io.takari:takari-filemanager:$takariFilemanVer") {
+        exclude group: 'org.slf4j', module: '*'
+    }
+    compile("org.codehaus.plexus:plexus-container-default:$plexusVer") {
+        exclude group: 'org.codehaus.plexus', module: 'plexus-utils'
+        exclude group: 'com.google.collections', module: 'google-collections'
+        exclude group: 'commons-logging', module: '*'
+        exclude group: 'junit', module: '*'
+    }
+}

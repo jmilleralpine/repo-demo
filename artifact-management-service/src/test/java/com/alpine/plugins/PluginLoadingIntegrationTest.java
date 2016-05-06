@@ -32,6 +32,7 @@ public class PluginLoadingIntegrationTest {
         PluginLoadingService pls = new PluginLoadingService(ams);
 
         // we want a classloader that does not include junit or hamcrest
+        // some JVMs may not cooperate, which is fine but this test will be meaningless
         ClassLoader primordial = ClassLoader.getSystemClassLoader().getParent();
         assumeNotNull(primordial);
         try {

@@ -21,10 +21,14 @@ import java.util.Collection;
  * {@link org.eclipse.aether.metadata.DefaultMetadata} will do what you need
  *
  * <p>
- * Generally speaking, all methods are safe for multiple threads to invoke them
- * simultaneously, and all methods will perform some sort of synchronous,
+ * Generally speaking, all methods must be safe for multiple threads to invoke them
+ * simultaneously, and all methods will likely perform some sort of synchronous,
  * blocking I/O. If this is unacceptable for your context, you are responsible
  * to ameliorate, e.g. put it in a threadpool or stick it in an actor
+ *
+ * <p>
+ * There should be higher level services that expose something more useful than
+ * a bare list of jars
  *
  * @author jason miller
  */

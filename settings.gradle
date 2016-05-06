@@ -1,2 +1,4 @@
-rootProject.name = 'aether-plugin-loader'
+rootProject.name = 'artifact-manager'
+include 'artifact-management-service'
+include 'artifact-rest-service'
 
