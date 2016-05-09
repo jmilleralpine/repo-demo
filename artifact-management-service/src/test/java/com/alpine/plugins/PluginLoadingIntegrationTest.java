@@ -29,12 +29,13 @@ public class PluginLoadingIntegrationTest {
     public void test() throws Exception {
 
         RepositorySystemArtifactManagementService ams = service(MAVEN_CENTRAL);
-        PluginLoadingService pls = new PluginLoadingService(ams);
+        PluginLoadingService pls = new PluginLoadingService(withLogs(ams));
 
         // we want a classloader that does not include junit or hamcrest
         // some JVMs may not cooperate, which is fine but this test will be meaningless
+        // in general, however, this should get us a pre-classpath classloader
         ClassLoader primordial = ClassLoader.getSystemClassLoader().getParent();
-        assumeNotNull(primordial);
+        assumeNotNull("could not retrieve a pre-classpath classloader", primordial);
         try {
             primordial.loadClass(Test.class.getCanonicalName());
             assumeTrue("was able to load Test from the presumed primordial classloader", false);

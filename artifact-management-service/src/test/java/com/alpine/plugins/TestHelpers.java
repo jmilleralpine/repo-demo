@@ -35,8 +35,15 @@ enum TestHelpers {
             localRepo,
             false,
             repo == null ? Collections.<Repo>emptyList() : Collections.singletonList(repo),
-            new RepositorySystemConfiguration.Timeout(5, TimeUnit.SECONDS),
-            new RepositorySystemConfiguration.Timeout(10, TimeUnit.SECONDS)
+            // our internet isn't great sometimes
+            new RepositorySystemConfiguration.Timeout(1, TimeUnit.MINUTES),
+            new RepositorySystemConfiguration.Timeout(1, TimeUnit.MINUTES)
         ));
+    }
+
+    public static RepositorySystemArtifactManagementService withLogs(RepositorySystemArtifactManagementService service) {
+        service.add(new LoggingTransferListener());
+        service.add(new LoggingRepositoryListener());
+        return service;
     }
 }

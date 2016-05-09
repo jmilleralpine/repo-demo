@@ -3,10 +3,7 @@ package com.alpine.plugins;
 import io.takari.filemanager.FileManager;
 import io.takari.filemanager.internal.DefaultFileManager;
 import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
-import org.eclipse.aether.ConfigurationProperties;
-import org.eclipse.aether.DefaultRepositorySystemSession;
-import org.eclipse.aether.RepositorySystem;
-import org.eclipse.aether.RepositorySystemSession;
+import org.eclipse.aether.*;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.collection.CollectRequest;
 import org.eclipse.aether.connector.basic.BasicRepositoryConnectorFactory;
@@ -25,6 +22,7 @@ import org.eclipse.aether.resolution.DependencyResult;
 import org.eclipse.aether.spi.connector.RepositoryConnectorFactory;
 import org.eclipse.aether.spi.connector.transport.TransporterFactory;
 import org.eclipse.aether.spi.io.FileProcessor;
+import org.eclipse.aether.transfer.TransferListener;
 import org.eclipse.aether.transport.file.FileTransporterFactory;
 import org.eclipse.aether.transport.http.HttpTransporterFactory;
 import org.eclipse.aether.util.graph.transformer.ConflictResolver;
@@ -44,9 +42,12 @@ import java.util.List;
 /**
  * Manages artifacts using the maven repository system
  *
- * @author jasonmiller
+ * @author Jason Miller
  */
 class RepositorySystemArtifactManagementService implements ArtifactManagementService {
+
+    private final CoalescingRepositoryListener repositoryListener = new CoalescingRepositoryListener();
+    private final CoalescingTransferListener transferListener = new CoalescingTransferListener();
 
     private final Path localRepo;
     private final List<RemoteRepository> repos;
@@ -143,12 +144,11 @@ class RepositorySystemArtifactManagementService implements ArtifactManagementSer
 
         DefaultRepositorySystemSession session = MavenRepositorySystemUtils.newSession();
 
+        session.setTransferListener(transferListener);
+        session.setRepositoryListener(repositoryListener);
+
         session.setConfigProperty(ConfigurationProperties.CONNECT_TIMEOUT, connectTimeoutMillis);
         session.setConfigProperty(ConfigurationProperties.REQUEST_TIMEOUT, requestTimeoutMillis);
-
-        // this possibly has a weird conflict resolution impact and I'm not convinced it's
-        // helpful anyway
-        //session.setConfigProperty(ConflictResolver.CONFIG_PROP_VERBOSE, true);
 
         session.setOffline(repos.isEmpty());
         session.setUpdatePolicy(RepositoryPolicy.UPDATE_POLICY_ALWAYS);
@@ -157,10 +157,6 @@ class RepositorySystemArtifactManagementService implements ArtifactManagementSer
 
         LocalRepository localRepository = new LocalRepository(localRepo.toFile());
         session.setLocalRepositoryManager(system.newLocalRepositoryManager(session, localRepository));
-
-        session.setTransferListener(new LoggingTransferListener());
-
-        session.setRepositoryListener(new LoggingRepositoryListener());
 
         return session;
     }
@@ -209,5 +205,25 @@ class RepositorySystemArtifactManagementService implements ArtifactManagementSer
         InstallResult result = system.install(session, new InstallRequest().addArtifact(artifact));
         return result.getArtifacts().size() == 1 &&
                 result.getArtifacts().iterator().next().toString().equals(artifact.toString());
+    }
+
+    @Override
+    public void add(RepositoryListener listener) {
+        repositoryListener.add(listener);
+    }
+
+    @Override
+    public void remove(RepositoryListener listener) {
+        repositoryListener.remove(listener);
+    }
+
+    @Override
+    public void add(TransferListener listener) {
+        transferListener.add(listener);
+    }
+
+    @Override
+    public void remove(TransferListener listener) {
+        transferListener.remove(listener);
     }
 }

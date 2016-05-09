@@ -1,5 +1,4 @@
 
-ext.jerseyVer = '2.22.2'
 
 dependencies {
 
@@ -7,4 +6,6 @@ dependencies {
 
     compile "org.glassfish.jersey.core:jersey-server:$jerseyVer"
     compile "org.glassfish.jersey.containers:jersey-container-grizzly2-http:$jerseyVer"
+
+    runtime "org.slf4j:slf4j-nop:$slf4jVer"
 }

@@ -1,13 +1,41 @@
+plugins {
+    id 'com.github.johnrengelman.shadow' version '1.2.3'
+    id 'com.github.johnrengelman.processes' version '0.3.0'
+    id 'us.kirchmeier.capsule' version '1.0.2'
+}
+
+apply plugin: 'idea'
+
+def javaTargetVersion = '1.7'
+
+ext.slf4jVer = '1.7.21'
+ext.aetherVer = '1.1.0'
+ext.mavenVer = '3.3.9'
+ext.takariLocalRepoVer = '0.11.2'
+ext.takariFilemanVer = '0.8.3'
+ext.plexusVer = '1.6'
+ext.jerseyVer = '2.22.2'
+
 group 'alpine-artifact-manager'
 version '1.0-SNAPSHOT'
 
-ext.slf4jVer = '1.7.21'
+idea {
+    project {
+        jdkName = javaTargetVersion
+        languageLevel = javaTargetVersion
+    }
+}
 
 subprojects {
+
     apply plugin: 'java'
     apply plugin: 'maven'
 
-    sourceCompatibility = 1.7
+    // this seems silly!
+    group rootProject.group
+    version rootProject.version
+
+    sourceCompatibility = javaTargetVersion
 
     repositories {
         mavenCentral()
@@ -15,8 +43,7 @@ subprojects {
 
     dependencies {
         compile "javax.inject:javax.inject:1"
-
-        runtime "org.slf4j:slf4j-nop:$slf4jVer"
+        compile "org.slf4j:slf4j-api:$slf4jVer"
 
         testCompile('junit:junit:4.12') {
             exclude group: 'org.hamcrest'

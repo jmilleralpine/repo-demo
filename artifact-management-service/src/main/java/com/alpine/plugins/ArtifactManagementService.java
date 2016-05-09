@@ -1,9 +1,11 @@
 package com.alpine.plugins;
 
+import org.eclipse.aether.RepositoryListener;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.installation.InstallationException;
 import org.eclipse.aether.metadata.Metadata;
 import org.eclipse.aether.resolution.DependencyResolutionException;
+import org.eclipse.aether.transfer.TransferListener;
 
 import java.util.Collection;
 
@@ -66,4 +68,12 @@ public interface ArtifactManagementService {
      * @throws InstallationException when the artifact cannot be installed
      */
     boolean install(Artifact artifact) throws InstallationException;
+
+    void add(RepositoryListener listener);
+
+    void remove(RepositoryListener listener);
+
+    void add(TransferListener listener);
+
+    void remove(TransferListener listener);
 }

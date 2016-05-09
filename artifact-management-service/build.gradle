@@ -1,10 +1,14 @@
 
+apply plugin: 'maven-publish'
+apply plugin: 'com.github.johnrengelman.shadow'
 
-ext.aetherVer = '1.1.0'
-ext.mavenVer = '3.3.9'
-ext.takariLocalRepoVer = '0.11.2'
-ext.takariFilemanVer = '0.8.3'
-ext.plexusVer = '1.6'
+configurations {
+    [compile, runtime]*.resolutionStrategy {
+        failOnVersionConflict()
+    }
+
+    all*.exclude group: 'org.eclipse.sisu', module: '*'
+}
 
 dependencies {
 
@@ -28,5 +32,34 @@ dependencies {
         exclude group: 'com.google.collections', module: 'google-collections'
         exclude group: 'commons-logging', module: '*'
         exclude group: 'junit', module: '*'
+    }
+}
+
+shadowJar {
+    dependencies {
+        exclude(dependency('org.slf4j:slf4j-api'))
+    }
+    relocate 'com.google', 'com.alpine.com.google'
+    relocate 'org', 'com.alpine.org'
+    relocate 'io', 'com.alpine.io'
+
+    // also need transformers?
+
+    baseName = project.name + "-all"
+    classifier = ''
+}
+
+publishing {
+    repositories {
+        maven {
+            url 'file:///Users/jasonmiller/.m2/repository'
+        }
+    }
+
+    publications {
+        shadow(MavenPublication) {
+            from components.shadow
+            artifactId = project.name + "-all"
+        }
     }
 }

@@ -27,7 +27,7 @@ class ArtifactClassLoader extends URLClassLoader {
         }
     }
 
-    ArtifactClassLoader(ClassLoader parent, Collection<Artifact> artifacts) {
+    ArtifactClassLoader(Collection<Artifact> artifacts, ClassLoader parent) {
         super(urlsFromArtifacts(artifacts), parent);
     }
 }

@@ -29,8 +29,8 @@ public class PluginLoadingService {
         try {
 
             return new ArtifactClassLoader(
-                parentClassLoader,
-                artifactManagementService.resolve(new DefaultArtifact(pluginCoords))
+                artifactManagementService.resolve(new DefaultArtifact(pluginCoords)),
+                parentClassLoader
             );
 
         } catch (Exception e) {

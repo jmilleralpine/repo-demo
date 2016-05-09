@@ -1,0 +1,14 @@
+apply plugin: 'groovy'
+apply plugin: 'java-gradle-plugin'
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    compile localGroovy()
+    compile project(':artifact-management-service')
+
+    // we need to run it to test it. this will be fun!
+    testCompile project(':artifact-rest-service')
+}
