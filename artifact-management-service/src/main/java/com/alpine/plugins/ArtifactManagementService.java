@@ -7,6 +7,7 @@ import org.eclipse.aether.metadata.Metadata;
 import org.eclipse.aether.resolution.DependencyResolutionException;
 import org.eclipse.aether.transfer.TransferListener;
 
+import java.nio.file.Path;
 import java.util.Collection;
 
 /**
@@ -35,6 +36,11 @@ import java.util.Collection;
  * @author jason miller
  */
 public interface ArtifactManagementService {
+
+    /**
+     * The local repository this service is using
+     */
+    Path localRepo();
 
     /**
      * check for the existence of the given artifact. If present, the file on the

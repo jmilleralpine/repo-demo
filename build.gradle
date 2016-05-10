@@ -30,6 +30,7 @@ subprojects {
 
     apply plugin: 'java'
     apply plugin: 'maven'
+    apply plugin: 'us.kirchmeier.capsule'
 
     // this seems silly!
     group rootProject.group

@@ -12,12 +12,10 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
 import java.io.File;
 
+import static com.alpine.plugins.Responses.*;
+
 @Path("repo")
 public class RepositoryResource {
-
-    private static final Response NOT_FOUND = Response.status(Response.Status.NOT_FOUND).build();
-    private static final Response CONFLICT = Response.status(Response.Status.CONFLICT).build();
-    private static final Response ACCEPTED = Response.accepted().build();
 
     private final PathParser pathParser;
     private final ArtifactManagementService artifactManagementService;
@@ -31,7 +29,6 @@ public class RepositoryResource {
 
     private Response serveIfFound(File file) throws Exception {
         if (file != null) {
-            System.out.println("responding with " + file.getAbsolutePath());
             return Response.ok(file, mimeHelper.getContentType(file)).build();
         }
         return NOT_FOUND;

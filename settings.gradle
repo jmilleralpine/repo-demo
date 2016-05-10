@@ -1,6 +1,6 @@
 rootProject.name = 'artifact-manager'
 include 'artifact-management-service'
-include 'artifact-rest-service'
+include 'artifact-rest-server'
 include 'alpine-artifact-uploader-gradle-plugin'
-include 'artifact-upload-utility'
+include 'artifact-upload'
 

@@ -162,6 +162,11 @@ class RepositorySystemArtifactManagementService implements ArtifactManagementSer
     }
 
     @Override
+    public Path localRepo() {
+        return localRepo;
+    }
+
+    @Override
     public Artifact find(Artifact artifact) {
         assert artifact != null && artifact.getFile() == null : "can only find a non-null, unresolved artifact";
 

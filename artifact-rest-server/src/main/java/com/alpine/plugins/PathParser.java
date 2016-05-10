@@ -15,18 +15,18 @@ import java.util.regex.Pattern;
 class PathParser {
 
     private static final Pattern VERSIONED_METADATA_PATTERN =
-        Pattern.compile("^((?:[\\w-]+/)+?)([\\w-]+)/(\\d[\\w\\.-]+)/(maven-metadata\\.xml(?:\\.sha1|\\.md5)?)$");
+        Pattern.compile("^((?:[\\w-]+/)+?)([\\w\\.-]+)/(\\d[\\w\\.-]*)/(maven-metadata\\.xml(?:\\.sha1|\\.md5)?)$");
 
     private static final Pattern ARTIFACT_METADATA_PATTERN =
-        Pattern.compile("^((?:[\\w-]+/)+?)([\\w-]+)/(maven-metadata\\.xml(?:\\.sha1|\\.md5)?)$");
+        Pattern.compile("^((?:[\\w-]+/)+?)([\\w\\.-]+)/(maven-metadata\\.xml(?:\\.sha1|\\.md5)?)$");
 
     /** matches the canonical release path, and snapshots that aren't named with timestamps */
     private static final Pattern RELEASE_PATH_PATTERN =
-        Pattern.compile("^((?:[\\w-]+/)+?)([\\w-]+)/(\\d[\\w\\.-]+)/\\2-\\3(?:-([a-zA-Z]+))?\\.([\\w\\.-]+)?$");
+        Pattern.compile("^((?:[\\w-]+/)+?)([\\w\\.-]+)/(\\d[\\w\\.-]*)/\\2-\\3(?:-([a-zA-Z]+))?\\.([\\w\\.-]+)?$");
 
     /** matches snapshots named with timestamps */
     private static final Pattern SNAPSHOT_PATH_PATTERN =
-        Pattern.compile("^((?:[\\w-]+/)+?)([\\w-]+)/(\\d[\\w\\.-]*?)-SNAPSHOT/\\2-\\3-\\d{8}\\.\\d{6}-\\d+(?:-([a-zA-Z]+))?\\.([\\w\\.-]+)?$");
+        Pattern.compile("^((?:[\\w-]+/)+?)([\\w\\.-]+)/(\\d[\\w\\.-]*?)-SNAPSHOT/\\2-\\3-\\d{8}\\.\\d{6}-\\d+(?:-([a-zA-Z]+))?\\.([\\w\\.-]+)?$");
 
     Metadata parseMetadata(String pathSegment) {
 

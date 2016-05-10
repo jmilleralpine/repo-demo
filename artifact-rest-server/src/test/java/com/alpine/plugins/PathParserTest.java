@@ -151,4 +151,16 @@ public class PathParserTest {
         assertThat(a.toString(), is("org.artifact.junit:junit:jar.md5:sources:4.13-SNAPSHOT"));
         assertTrue(a.isSnapshot());
     }
+
+    @Test
+    public void trouble() {
+
+        a = pta.parseArtifact("org/osgi/org.osgi.compendium/4.3.0/org.osgi.compendium-4.3.0.pom");
+        assertThat(a.toString(), is("org.osgi:org.osgi.compendium:pom:4.3.0"));
+        assertFalse(a.isSnapshot());
+
+        a = pta.parseArtifact("org/jboss/jboss-parent/5/jboss-parent-5.pom");
+        assertThat(a.toString(), is("org.jboss:jboss-parent:pom:5"));
+        assertFalse(a.isSnapshot());
+    }
 }

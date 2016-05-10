@@ -38,6 +38,7 @@ public class Main {
                 new ResourceConfig()
                     // resources
                     .register(RepositoryResource.class)
+                    .register(ResolveResource.class)
                     // injections
                     .register(new AbstractBinder() {
                         @Override
@@ -92,7 +93,7 @@ public class Main {
                     })
         );
 
-        System.out.println("Press any key to quit");
+        System.out.println("Press enter to quit");
         System.in.read();
         server.stop();
     }

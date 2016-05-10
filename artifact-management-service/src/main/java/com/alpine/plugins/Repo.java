@@ -8,7 +8,7 @@ import java.util.Map;
 /**
  * Simple configuration of a repo for loading dependencies
  */
-class Repo {
+public class Repo {
 
     private static final Map<String, String> KNOWN_REPOS;
 
@@ -23,14 +23,19 @@ class Repo {
     final String id;
     final URI uri;
 
-    Repo(String id) {
+    public Repo(String id) {
         assert KNOWN_REPOS.containsKey(id) : id + " is not a known repo";
         this.id = id;
         this.uri = URI.create(KNOWN_REPOS.get(id));
     }
 
-    Repo(String id, URI uri) {
+    public Repo(String id, URI uri) {
         this.id = id;
         this.uri = uri;
+    }
+
+    @Override
+    public String toString() {
+        return id + "(" + uri + ")";
     }
 }
